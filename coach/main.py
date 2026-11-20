@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, time as dtime
 
@@ -59,6 +60,28 @@ async def send_long(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str)
             await context.bot.send_message(chat_id, strip_tags(formatted))
 
 
+async def keep_typing(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    """Mantém o "digitando…" visível enquanto o Claude pensa (expira a cada ~5 s)."""
+    try:
+        while True:
+            await context.bot.send_chat_action(chat_id, ChatAction.TYPING)
+            await asyncio.sleep(4)
+    except asyncio.CancelledError:
+        pass
+    except Exception:  # noqa: BLE001
+        log.warning("typing indicator failed", exc_info=True)
+
+
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    log.error("handler error", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_chat:
+        try:
+            await context.bot.send_message(update.effective_chat.id,
+                                           f"Deu um erro ({type(context.error).__name__}). Tente de novo.")
+        except Exception:  # noqa: BLE001
+            pass
+
+
 async def run_coach(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str | None,
                     image: bytes | None = None) -> None:
     if not allowed(update):
@@ -71,7 +94,7 @@ async def run_coach(update: Update, context: ContextTypes.DEFAULT_TYPE, text: st
     db: DB = context.application.bot_data["db"]
     uid = update.effective_user.id
     db.update_profile(uid, {"chat_id": update.effective_chat.id})
-    await context.bot.send_chat_action(update.effective_chat.id, ChatAction.TYPING)
+    typing = asyncio.create_task(keep_typing(context, update.effective_chat.id))
     try:
         reply = await coach.chat(uid, text, image)
     except anthropic.RateLimitError:
@@ -88,6 +111,11 @@ async def run_coach(update: Update, context: ContextTypes.DEFAULT_TYPE, text: st
                      "console.anthropic.com → Billing.")
         else:
             reply = f"Erro na API ({e.status_code}): {detail[:500]}"
+    except Exception as e:  # noqa: BLE001 — nunca deixar o aluno sem resposta
+        log.exception("unexpected error")
+        reply = f"Deu um erro inesperado ({type(e).__name__}: {str(e)[:300]}). Tente de novo."
+    finally:
+        typing.cancel()
     await send_long(context, update.effective_chat.id, reply)
 
 
@@ -198,6 +226,8 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("novaconversa", on_reset))
     app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, on_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
+
+    app.add_error_handler(on_error)
 
     jq = app.job_queue
     for t in CONFIG.protein_check_times:
