@@ -63,16 +63,18 @@ def protein_check(db: DB, user_id: int, now: datetime, slot: str) -> str | None:
 
     if totals["meals"] == 0:
         return (
-            f"⏰ Ainda não tem nenhuma refeição registrada hoje. Manda foto ou descrição do que "
-            f"comeu para eu acompanhar sua proteína (meta: {goal} g)."
+            f"<b>⏰ Nenhuma refeição registrada hoje</b>\n"
+            f"Manda foto ou descrição do que comeu para eu acompanhar sua proteína (meta: {goal} g)."
         )
 
     lines = [
-        f"⚠️ Proteína do dia: {eaten:.0f} g de {goal} g — faltam {remaining:.0f} g.",
+        f"<b>⚠️ Proteína: {eaten:.0f}/{goal} g — faltam {remaining:.0f} g</b>",
     ]
     if not late_in_day:
-        lines.append(f"Até agora o ideal seria ~{expected:.0f} g. Tente ~{targets['protein_per_meal_g']} g na próxima refeição.")
-    lines.append("Opções para fechar a conta:")
+        lines.append(f"Ideal até agora: ~{expected:.0f} g. Na próxima refeição: ~{targets['protein_per_meal_g']} g.")
+    lines.append("")
+    lines.append("<b>Opções:</b>")
     lines += suggestions(remaining)
-    lines.append("(Ingestão ≥1,6 g/kg/dia maximiza ganho de massa magra — Morton et al., 2018.)")
+    lines.append("")
+    lines.append("<i>≥1,6 g/kg/dia maximiza o ganho de massa magra (Morton et al., 2018)</i>")
     return "\n".join(lines)

@@ -7,7 +7,8 @@ from datetime import datetime, time as dtime
 
 import anthropic
 from telegram import Update
-from telegram.constants import ChatAction
+from telegram.constants import ChatAction, ParseMode
+from telegram.error import BadRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -19,14 +20,13 @@ from telegram.ext import (
 from .agent import Coach
 from .config import CONFIG
 from .db import DB
+from .formatting import split_messages, strip_tags, to_html
 from .prompts import WEEKLY_FEEDBACK_REQUEST
 from .reminders import protein_check
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("coach")
-
-TG_LIMIT = 4000
 
 HELP = (
     "Sou seu personal trainer 🏋️\n\n"
@@ -49,14 +49,14 @@ def allowed(update: Update) -> bool:
 
 
 async def send_long(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str) -> None:
-    while text:
-        if len(text) <= TG_LIMIT:
-            cut = text
-        else:
-            idx = text.rfind("\n", 0, TG_LIMIT)
-            cut = text[: idx if idx > 0 else TG_LIMIT]
-        await context.bot.send_message(chat_id, cut)
-        text = text[len(cut):].lstrip("\n")
+    for part in split_messages(text):
+        formatted = to_html(part)
+        if not formatted:
+            continue
+        try:
+            await context.bot.send_message(chat_id, formatted, parse_mode=ParseMode.HTML)
+        except BadRequest:  # HTML inválido: manda sem formatação
+            await context.bot.send_message(chat_id, strip_tags(formatted))
 
 
 async def run_coach(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str | None,
@@ -156,7 +156,7 @@ async def job_protein(context: ContextTypes.DEFAULT_TYPE) -> None:
             continue
         msg = protein_check(db, uid, now, slot)
         if msg:
-            await context.bot.send_message(chat_id, msg)
+            await send_long(context, chat_id, msg)
             coach.note_proactive(uid, msg)
 
 
@@ -169,7 +169,7 @@ async def job_weekly(context: ContextTypes.DEFAULT_TYPE) -> None:
             continue
         try:
             reply = await coach.chat(uid, WEEKLY_FEEDBACK_REQUEST)
-            await send_long(context, chat_id, "📊 Feedback semanal\n\n" + reply)
+            await send_long(context, chat_id, "<b>📊 Feedback semanal</b>\n\n" + reply)
         except anthropic.APIError:
             log.exception("weekly feedback failed for %s", uid)
 
