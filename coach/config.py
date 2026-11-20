@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
 
@@ -14,7 +15,8 @@ load_dotenv()
 def _ids(raw: str | None) -> set[int]:
     if not raw:
         return set()
-    return {int(x) for x in raw.replace(" ", "").split(",") if x}
+    # tolera espaços, aspas e separadores errados; ignora o que não for número
+    return {int(x) for x in re.findall(r"\d+", raw)}
 
 
 def _times(raw: str | None, default: str) -> list[str]:
