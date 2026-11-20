@@ -11,6 +11,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Remove espaços/quebras de linha coladas sem querer nas chaves
+for _k in ("TELEGRAM_BOT_TOKEN", "ANTHROPIC_API_KEY"):
+    if _k in os.environ:
+        os.environ[_k] = os.environ[_k].strip().strip('"').strip("'").strip()
+
 
 def _ids(raw: str | None) -> set[int]:
     if not raw:
