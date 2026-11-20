@@ -78,9 +78,16 @@ async def run_coach(update: Update, context: ContextTypes.DEFAULT_TYPE, text: st
         reply = "Muitas requisições agora. Tente de novo em um minuto."
     except anthropic.APIConnectionError:
         reply = "Não consegui falar com o servidor da IA. Tente de novo em instantes."
+    except anthropic.AuthenticationError:
+        reply = "Erro 401: a ANTHROPIC_API_KEY é inválida. Confira a chave no Railway."
     except anthropic.APIStatusError as e:
         log.exception("API error")
-        reply = f"Erro na API ({e.status_code}). Tente de novo."
+        detail = getattr(e, "message", "") or str(e)
+        if "credit balance" in detail.lower():
+            reply = ("Erro 400: sua conta da Anthropic está sem créditos. Adicione créditos em "
+                     "console.anthropic.com → Billing.")
+        else:
+            reply = f"Erro na API ({e.status_code}): {detail[:500]}"
     await send_long(context, update.effective_chat.id, reply)
 
 

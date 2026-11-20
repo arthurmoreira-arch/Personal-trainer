@@ -101,6 +101,12 @@ class Coach:
         return reply or "👍"
 
     async def _create(self, messages: list[dict[str, Any]]):
+        extra: dict[str, Any] = {}
+        # Haiku não tem modelo de reserva no servidor
+        if "haiku" not in CONFIG.model:
+            # Se o modelo principal recusar por um falso positivo de segurança,
+            # a API refaz a mesma requisição num modelo de reserva.
+            extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
         return await self.client.beta.messages.create(
             model=CONFIG.model,
             max_tokens=16000,
@@ -110,10 +116,7 @@ class Coach:
             thinking={"type": "adaptive"},
             output_config={"effort": CONFIG.effort},
             cache_control={"type": "ephemeral"},
-            # Se o modelo principal recusar por um falso positivo de segurança,
-            # a API refaz a mesma requisição num modelo de reserva.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
+            **extra,
         )
 
     def _persist(self, user_id: int, turn: list[dict[str, Any]], had_image: bool) -> None:
