@@ -9,7 +9,7 @@ from datetime import datetime, time as dtime
 import anthropic
 from telegram import Update
 from telegram.constants import ChatAction, ParseMode
-from telegram.error import BadRequest
+from telegram.error import BadRequest, NetworkError, RetryAfter, TimedOut
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -49,15 +49,33 @@ def allowed(update: Update) -> bool:
     return uid is not None and (not CONFIG.allowed_user_ids or uid in CONFIG.allowed_user_ids)
 
 
+async def _send(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str,
+                parse_mode: str | None = None, attempts: int = 4) -> None:
+    """Envia com novas tentativas: falhas de rede passageiras não fazem a resposta se perder."""
+    for i in range(attempts):
+        try:
+            await context.bot.send_message(chat_id, text, parse_mode=parse_mode)
+            return
+        except BadRequest:
+            raise
+        except RetryAfter as e:
+            await asyncio.sleep(float(getattr(e, "retry_after", 3)) + 1)
+        except (NetworkError, TimedOut):
+            if i == attempts - 1:
+                raise
+            log.warning("falha de rede ao enviar (tentativa %s), tentando de novo", i + 1)
+            await asyncio.sleep(2 ** i)
+
+
 async def send_long(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str) -> None:
     for part in split_messages(text):
         formatted = to_html(part)
         if not formatted:
             continue
         try:
-            await context.bot.send_message(chat_id, formatted, parse_mode=ParseMode.HTML)
+            await _send(context, chat_id, formatted, ParseMode.HTML)
         except BadRequest:  # HTML inválido: manda sem formatação
-            await context.bot.send_message(chat_id, strip_tags(formatted))
+            await _send(context, chat_id, strip_tags(formatted))
 
 
 async def keep_typing(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
@@ -213,7 +231,17 @@ def build_app() -> Application:
     if not CONFIG.allowed_user_ids:
         log.warning("ALLOWED_USER_IDS vazio: qualquer pessoa que achar o bot poderá usá-lo (e gastar sua API).")
     db = DB(CONFIG.db_path)
-    app = Application.builder().token(CONFIG.telegram_token).build()
+    app = (
+        Application.builder()
+        .token(CONFIG.telegram_token)
+        .connect_timeout(20)
+        .read_timeout(30)
+        .write_timeout(30)
+        .pool_timeout(20)
+        .get_updates_connect_timeout(20)
+        .get_updates_read_timeout(40)
+        .build()
+    )
     app.bot_data["db"] = db
     app.bot_data["coach"] = Coach(db)
 
