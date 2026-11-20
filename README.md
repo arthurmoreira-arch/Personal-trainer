@@ -36,6 +36,17 @@ Os números (metas de calorias e proteína, decisões de progressão) são calcu
 - Pedrosa GF et al. (2022); Wolf M et al. (2023). Treino em amplitude alongada.
 - Bell L et al. (2023). *Sports Med Open*. Deload.
 
+**Glicose e insulina**
+- Shukla AP et al. (2015, 2017). *Diabetes Care*. Comer vegetais e proteína antes do carboidrato reduz o pico de glicose.
+- Buffey AJ et al. (2022). *Sports Med* 52:1765-87. Caminhar logo após comer reduz a glicemia pós-refeição.
+- Augustin LSA et al. (2015). *Nutr Metab Cardiovasc Dis* 25:795-815. Consenso sobre índice e carga glicêmica.
+- Strasser B & Pesta D (2013). *Exerc Sport Sci Rev*. Musculação melhora a sensibilidade à insulina.
+- Spiegel K et al. (1999). *Lancet*; Buxton OM et al. (2010). *Diabetes*. Pouco sono piora a sensibilidade à insulina.
+- Shishehbor F et al. (2017). *Diabetes Res Clin Pract*. Efeito modesto do vinagre.
+- Hall KD et al. (2015). *Cell Metab*; Gardner CD et al. (2018). *JAMA* (DIETFITS). Com calorias iguais, low-carb e low-fat dão perda de gordura parecida.
+- Staples AW et al. (2011). *MSSE*; Glynn EL et al. (2010). *J Nutr*. Carboidrato somado à proteína no pós-treino não aumenta a síntese proteica.
+- Aragon AA & Schoenfeld BJ (2013). *JISSN* 10:5. Janela anabólica e horário dos nutrientes.
+
 **Rotina e recuperação**
 - Nedeltcheva AV et al. (2010). *Ann Intern Med* 153:435-41. Pouco sono em déficit aumenta a perda de massa magra.
 - Dattilo M et al. (2011). *Med Hypotheses* 77:220-2. Sono e recuperação muscular.

@@ -4,5 +4,4 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY coach ./coach
 ENV DB_PATH=/data/coach.db
-VOLUME /data
 CMD ["python", "-m", "coach.main"]
